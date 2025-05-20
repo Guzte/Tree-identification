@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeafSnap Pro</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background: #f0f8f5; }
+    header { font-size: 2em; margin-bottom: 20px; color: #2a5d34; }
+    input[type="file"] { margin-top: 20px; }
+    #preview { margin-top: 20px; max-width: 300px; display: none; }
+    #result { margin-top: 30px; padding: 15px; border: 1px solid #ccc; background: #fff; display: none; }
+    #error { color: red; display: none; }
+  </style>
+</head>
+<body>
+
+  <header>LeafSnap Pro</header>
+  <p>Upload a photo of a tree or leaf for instant identification.</p>
+
+  <input type="file" accept="image/*" onchange="previewImage(event)">
+  <br>
+  <img id="preview" src="#" alt="Image Preview" />
+  <br>
+  <button onclick="identifyTree()">Identify Tree</button>
+
+  <div id="error">Error: Unable to identify the plant. Please try again.</div>
+
+  <div id="result">
+    <h3>Identification Result:</h3>
+    <p><strong>Common Name:</strong> <span id="common-name">N/A</span></p>
+    <p><strong>Scientific Name:</strong> <span id="scientific-name">N/A</span></p>
+    <p><strong>Description:</strong> <span id="description">N/A</span></p>
+  </div>
+
+  <script>
+    let imageData = null;
+
+    function previewImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('preview').src = e.target.result;
+          document.getElementById('preview').style.display = 'block';
+          imageData = e.target.result.split(',')[1]; // Extract base64 string
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    async function identifyTree() {
+      if (!imageData) {
+        alert("Please upload an image first.");
+        return;
+      }
+
+      const apiKey = 'YOUR_API_KEY'; // Replace with your Pl@ntNet API key
+      const url = 'https://api.plant.id/v3/identification';
+      const headers = { 'Api-Key': apiKey };
+      const body = JSON.stringify({
+        images: [imageData],
+        details: ['url', 'common_names']
+      });
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: headers,
+          body: body
+        });
+
+        if (!response.ok) throw new Error('API request failed');
+
+        const data = await response.json();
+        if (!data.suggestions || data.suggestions.length === 0) {
+          throw new Error('No suggestions found');
+        }
+
+        const suggestion = data.suggestions[0];
+        document.getElementById('common-name').textContent = suggestion.common_names.join(', ') || 'N/A';
+        document.getElementById('scientific-name').textContent = suggestion.scientific_name || 'N/A';
+        document.getElementById('description').textContent = suggestion.details.url || 'N/A';
+        document.getElementById('result').style.display = 'block';
+        document.getElementById('error').style.display = 'none';
+      } catch (error) {
+        console.error(error);
+        document.getElementById('result').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+      }
+    }
+  </script>
+
+</body>
+                                       </html> 
